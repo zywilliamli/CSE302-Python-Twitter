@@ -27,10 +27,8 @@ public_key = private_key.verify_key
 # Serialize the verify key to send it to a third party
 public_key_hex = public_key.encode(encoder=nacl.encoding.HexEncoder)
 
-message = bytes(public_key_hex.decode('utf-8') + username, encoding='utf-8')
-
 # Signature of the username
-signature = private_key.sign(message, encoder=nacl.encoding.HexEncoder)
+signature = private_key.sign(bytes(public_key_hex.decode('utf-8') + username, encoding='utf-8'), encoder=nacl.encoding.HexEncoder)
 
 payload = {
     'pubkey': public_key_hex.decode('utf-8'),
