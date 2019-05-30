@@ -3,9 +3,10 @@ import json
 import base64
 import nacl.encoding
 import nacl.signing
+import time
 
 
-def post(url, headers, payload):
+def __post(url, headers, payload):
     payload_data = json.dumps(payload).encode('utf-8')
 
     try:
@@ -18,11 +19,11 @@ def post(url, headers, payload):
         print(error.read())
         exit()
 
-    JSON_object = json.loads(data.decode(encoding))
-    print(JSON_object)
+    json_object = json.loads(data.decode(encoding))
+    return json_object
 
 
-def get(url, headers):
+def __get(url, headers):
     try:
         req = urllib.request.Request(url, headers=headers)
         response = urllib.request.urlopen(req)
@@ -33,15 +34,15 @@ def get(url, headers):
         print(error.read())
         exit()
 
-    JSON_object = json.loads(data.decode(encoding))
-    print(JSON_object)
+    json_object = json.loads(data.decode(encoding))
+    return json_object
 
 
 username = "zli667"
 password = "TwelveHertz_916720181"
 
-LISTEN_IP = "0.0.0.0"
-LISTEN_PORT = 1234
+listen_ip = "0.0.0.0"
+listen_port = 1234
 credentials = ('%s:%s' % (username, password))
 b64_credentials = base64.b64encode(credentials.encode('ascii'))
 
@@ -67,7 +68,7 @@ payload = {
         {'pubkey': public_key_hex.decode('utf-8'),
          'signature': ping_signature.signature.decode('utf-8')},
     'report':
-        {'connection_address': LISTEN_IP + ':' + str(LISTEN_PORT),
+        {'connection_address': listen_ip + ':' + str(listen_port),
          'connection_location': 0,
          'incoming_pubkey': public_key_hex.decode('utf-8'),
          'status': 'online'}
@@ -77,10 +78,23 @@ urls = {
     'load_new_apikey': "http://cs302.kiwi.land/api/load_new_apikey",
     'add_pubkey': "http://cs302.kiwi.land/api/add_pubkey",
     'ping': "http://cs302.kiwi.land/api/ping",
-    'report': "http://cs302.kiwi.land/api/report"
+    'report': "http://cs302.kiwi.land/api/report",
+    'broadcast': "http://cs302.kiwi.land/api/rx_broadcast"
 }
 
-get(urls['load_new_apikey'], headers)
-post(urls['add_pubkey'], headers, payload['add_pubkey'])
-post(urls['ping'], headers, payload['ping'])
-post(urls['report'], headers, payload['report'])
+apikey_response = __get(urls['load_new_apikey'], headers)
+pubkey_response = __post(urls['add_pubkey'], headers, payload['add_pubkey'])
+ping_response = __post(urls['ping'], headers, payload['ping'])
+report_response = __post(urls['report'], headers, payload['report'])
+
+broadcast_message = 'yeeeeet'
+broadcast_signature = private_key.sign(bytes(pubkey_response['loginserver_record'] + broadcast_message + str(time.time()), encoding='utf-8'),
+                                       encoder=nacl.encoding.HexEncoder)
+
+broadcast_payload = {'loginserver_record': pubkey_response['loginserver_record'],
+                     'message': broadcast_message,
+                     'sender_created_at': str(time.time()),
+                     'signature': broadcast_signature.signature.decode('utf-8')}
+
+broadcast_response = __post(urls['broadcast'], headers, broadcast_payload)
+print(broadcast_response)
