@@ -5,13 +5,12 @@
     <script type="text/javascript" src="/static/script.js"></script>
 
 </head>
-<body>
+<body class="refreshBroadcast">
 
 
 <div id="Header">
-    <h2>P2P chat client</h2>
-    <!--<input id="fileName" type="text" placeholder="Enter File Name" name="file">-->
-    <!--<button id="sendFile">Send File</button>-->
+    <h2>Tweeter</h2>
+    <button id="logout">sign out</button>
 </div>
 
 <div id="LoginScreen">
@@ -29,45 +28,36 @@
     <div id="UserList">
         <h2 onclick='JavaScript:reset();'>USERS</h2>
     </div>
-    <section id="The-Msg">
+    <div id="The-Msg">
         <header id="Top-Bar">
             <center>
                 <h1>Messages</h1>
-            </center>
-        </header>
-
-        <ul id="conversation">
-        </ul>
-        <br>
-        <footer>
-            <center>
                 <input id="msg" type="text" placeholder="Enter Message" name="MsgS">
                 <input id="sendName" type="text" placeholder="Enter User" name="NmeS">
                 <button id="sendMessage">Send</button>
             </center>
-        </footer>
-    </section>
-    <section id="Broadcast">
+        </header>
+        <div id="message">
+        </div>
+        <ul id="conversation">
+        </ul>
+        <br>
+    </div>
+    <div id="Broadcast">
         <header id="B-Bar">
             <center>
                 <h1>Broadcast</h1>
-            </center>
-        </header>
-        {% for broadcast in broadcasts %}
-            <p>
-                {{ broadcast[0] }}
-            </p>
-        {% endfor %}
-        <ul id="B-conversation">
-        </ul>
-        <br>
-        <footer>
-            <center>
                 <input id="b-msg" type="text" placeholder="Enter Message" name="MsgB">
                 <button id="broadcastMessage">Send</button>
             </center>
-        </footer>
-    </section>
+        </header>
+        <div id="broadcast_message">
+        </div>
+
+        <ul id="B-conversation">
+        </ul>
+        <br>
+    </div>
 </div>
 
 </body>

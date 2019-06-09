@@ -9,37 +9,22 @@ import base64
 import nacl.encoding
 import nacl.signing
 from database import Database
-from jinja2 import Environment, FileSystemLoader
-
-file_loader = FileSystemLoader('template')
-env = Environment(loader=file_loader)
 
 page = open('page.html', 'r').read()
 
 listen_ip = "0.0.0.0"
 listen_port = 1233
 
-private_key = nacl.signing.SigningKey.generate()
-
-user_list = {}
-pubkey_response = {}
-
-public_key = private_key.verify_key
-public_key_hex = public_key.encode(encoder=nacl.encoding.HexEncoder)
-
-ip = socket.gethostbyname(socket.gethostname())
 connection = {'lab': '0', 'wifi': '1', 'world': '2'}
 word_filter = {'fuck': '****', 'shit': '****', 'cunt': '****'}
-
 status = ['online', 'away', 'busy', 'offline']
-headers = {}
+
 urls = {
     'load_new_apikey': "http://cs302.kiwi.land/api/load_new_apikey",
     'add_pubkey': "http://cs302.kiwi.land/api/add_pubkey",
     'ping': "http://cs302.kiwi.land/api/ping",
     'report': "http://cs302.kiwi.land/api/report",
     'list_users': "http://cs302.kiwi.land/api/list_users",
-    'rx_privatemessage': "http://cs302.kiwi.land/api/rx_privatemessage"
 }
 
 db = Database()
@@ -70,27 +55,6 @@ class API(object):
     @cherrypy.tools.json_out()
     def ping_check(self):
         return {'response': 'ok', 'my_time': str(time.time())}
-    #
-    # @cherrypy.expose
-    # @cherrypy.tools.json_in()
-    # def checkmessage(self):
-    #     dict = cherrypy.request.json
-    #
-    # @cherrypy.expose
-    # @cherrypy.tools.json_in()
-    # def rx_groupmessage(self):
-    #     dict = cherrypy.request.json
-    #
-    # @cherrypy.expose
-    # @cherrypy.tools.json_in()
-    # def rx_groupinvite(self):
-    #     dict = cherrypy.request.json
-    #
-    # @cherrypy.expose
-    # @cherrypy.tools.json_in()
-    # def ping_check(self):
-    #     dict = cherrypy.request.json
-    #
 
 
 class MainApp(object):
@@ -105,23 +69,11 @@ class MainApp(object):
     def default(self, *args, **kwargs):
         # """The default page, given when we don't recognise where the request is for."""
         cherrypy.response.status = 404
-        template = env.get_template('page.html')
-
-        broadcasts = db.get_broadcast()
-        messages = db.get_message()
-
-        print(broadcasts)
-
-        return template.render(broadcasts=broadcasts, messages=messages)
+        return page
 
     @cherrypy.expose
     def index(self):
-        template = env.get_template('page.html')
-
-        broadcasts = db.get_broadcast()
-        messages = db.get_message()
-
-        return template.render(broadcasts=broadcasts, messages=messages)
+        return page
 
     @cherrypy.expose
     def sum(self, a=0, b=0):  # All inputs are strings by default
@@ -149,11 +101,10 @@ class MainApp(object):
     @cherrypy.expose
     def update_users(self):
         try:
-            user_list = Data.get_user_list()
+            Data.get_user_list()
             upi_list = []
-            for user in user_list['users']:
+            for user in cherrypy.session['user_list']['users']:
                 upi_list.append(user['username'])
-            print(upi_list)
             return json.dumps(upi_list)
         except:
             return '1'
@@ -165,7 +116,6 @@ class MainApp(object):
         broadcast_list = []
         for broadcast in broadcasts:
             broadcast_list.append(broadcast['message'])
-        print(broadcast_list)
         return json.dumps(broadcast_list)
 
     @cherrypy.expose
@@ -175,7 +125,6 @@ class MainApp(object):
         message_list = []
         for message in messages:
             message_list.append(message['message'])
-        print(message_list)
         return json.dumps(message_list)
 
     @cherrypy.expose
@@ -190,16 +139,15 @@ class MainApp(object):
 
     @cherrypy.expose
     def getMessage(self):
-        # pass
-        print(db.get_message())
         return db.get_message()[0]['message']
 
     @cherrypy.expose
     def ping_check(self):
-        ping_payload = {'my_time': str(time.time()), 'connection_address': ip + ':' + str(listen_port), 'connection_location': connection['wifi']}
-        for user in user_list['users']:
+        ping_payload = {'my_time': str(time.time()), 'connection_address': cherrypy.session['ip'] + ':' + str(listen_port),
+                        'connection_location': connection['wifi']}
+        for user in cherrypy.session['user_list']['users']:
             try:
-                ping_response = Data.post('http://' + user['connection_address'] + '/api/ping_check', headers, ping_payload, 0.2)
+                ping_response = Data.post('http://' + user['connection_address'] + '/api/ping_check', cherrypy.session['headers'], ping_payload, 0.2)
                 print(ping_response)
             except:
                 pass
@@ -209,8 +157,7 @@ class Data(object):
 
     @staticmethod
     def pm(message, user_name):
-        admin = next(item for item in user_list['users'] if item['username'] == user_name)
-        # admin = user_list['users'][user_name]
+        admin = next(item for item in cherrypy.session['user_list']['users'] if item['username'] == user_name)
         message1 = message.encode('utf-8')
 
         verifykey = nacl.signing.VerifyKey(admin['incoming_pubkey'], encoder=nacl.encoding.HexEncoder)
@@ -219,42 +166,43 @@ class Data(object):
         encrypted = sealed_box.encrypt(message1, encoder=nacl.encoding.HexEncoder)
         message = encrypted.decode('utf-8')
 
-        pm_signature = private_key.sign(
-            bytes(pubkey_response['loginserver_record'] + admin['incoming_pubkey'] + admin['username'] + message + str(time.time()),
-                  encoding='utf-8'),
+        pm_signature = cherrypy.session['private_key'].sign(
+            bytes(
+                cherrypy.session['pubkey_response']['loginserver_record'] + admin['incoming_pubkey'] + admin['username'] + message + str(time.time()),
+                encoding='utf-8'),
             encoder=nacl.encoding.HexEncoder)
 
         pm_payload = {
-            'loginserver_record': pubkey_response['loginserver_record'],
+            'loginserver_record': cherrypy.session['pubkey_response']['loginserver_record'],
             'target_pubkey': admin['incoming_pubkey'],
             'target_username': admin['username'],
             'encrypted_message': message,
             'sender_created_at': str(time.time()),
             'signature': pm_signature.signature.decode('utf-8')
         }
-        pm_response = Data.post('http://' + admin['connection_address'] + '/api/rx_privatemessage', headers, pm_payload, 5)
+        pm_response = Data.post('http://' + admin['connection_address'] + '/api/rx_privatemessage', cherrypy.session['headers'], pm_payload, 5)
         print(pm_response)
 
     @staticmethod
     def get_user_list():
-        global user_list
-        user_list = Data.get(urls['list_users'], headers, 5)
-        return user_list
+        cherrypy.session['user_list'] = Data.get(urls['list_users'], cherrypy.session['headers'], 5)
 
     @staticmethod
     def rx_broadcast(message):
-        broadcast_signature = private_key.sign(bytes(pubkey_response['loginserver_record'] + message + str(time.time()), encoding='utf-8'),
-                                               encoder=nacl.encoding.HexEncoder)
+        broadcast_signature = cherrypy.session['private_key'].sign(
+            bytes(cherrypy.session['pubkey_response']['loginserver_record'] + message + str(time.time()), encoding='utf-8'),
+            encoder=nacl.encoding.HexEncoder)
 
-        broadcast_payload = {'loginserver_record': pubkey_response['loginserver_record'],
+        broadcast_payload = {'loginserver_record': cherrypy.session['pubkey_response']['loginserver_record'],
                              'message': message,
                              'sender_created_at': str(time.time()),
                              'signature': broadcast_signature.signature.decode('utf-8')}
 
-        for user in user_list['users']:
+        for user in cherrypy.session['user_list']['users']:
             print(user['username'])
             try:
-                broadcast_response = Data.post('http://' + user['connection_address'] + '/api/rx_broadcast', headers, broadcast_payload, 1)
+                broadcast_response = Data.post('http://' + user['connection_address'] + '/api/rx_broadcast', cherrypy.session['headers'],
+                                               broadcast_payload, 1)
                 print(broadcast_response)
             except:
                 print('excepted')
@@ -262,12 +210,12 @@ class Data(object):
 
     @staticmethod
     def user_logout():
-        payload = {'connection_address': ip + ':' + str(listen_port),
+        payload = {'connection_address': cherrypy.session['ip'] + ':' + str(listen_port),
                    'connection_location': connection['lab'],
-                   'incoming_pubkey': public_key_hex.decode('utf-8'),
+                   'incoming_pubkey': cherrypy.session['public_key_hex'].decode('utf-8'),
                    'status': status[3]}
 
-        report_response = Data.post(urls['report'], headers, payload, 5)
+        report_response = Data.post(urls['report'], cherrypy.session['headers'], payload, 5)
 
         if report_response['response'] == 'ok':
             return '0'
@@ -278,14 +226,14 @@ class Data(object):
     def create_headers(username, password):
         credentials = ('%s:%s' % (username, password))
         b64_credentials = base64.b64encode(credentials.encode('ascii'))
-
-        headers['Authorization'] = 'Basic %s' % b64_credentials.decode('ascii')
-        headers['Content-Type'] = 'application/json; charset=utf-8'
+        cherrypy.session['headers'] = {
+            'Authorization': 'Basic %s' % b64_credentials.decode('ascii'),
+            'Content-Type': 'application/json; charset=utf-8',
+        }
 
     @staticmethod
     def create_api_headers(username, api_key):
-        global headers
-        headers = {
+        cherrypy.session['headers'] = {
             'X-username': username,
             'X-apikey': api_key,
             'Content-Type': 'application/json; charset=utf-8'
@@ -294,35 +242,40 @@ class Data(object):
     # Functions only after here
     @staticmethod
     def authorise_user_login(username, password, location):
-        print(location)
+        cherrypy.session['ip'] = socket.gethostbyname(socket.gethostname())
+        cherrypy.session['private_key'] = nacl.signing.SigningKey.generate()
+        cherrypy.session['public_key'] = cherrypy.session['private_key'].verify_key
+        cherrypy.session['public_key_hex'] = cherrypy.session['public_key'].encode(encoder=nacl.encoding.HexEncoder)
+
         Data.create_headers(username, password)
 
-        ap_signature = private_key.sign(bytes(public_key_hex.decode('utf-8') + username, encoding='utf-8'), encoder=nacl.encoding.HexEncoder)
-        ping_signature = private_key.sign(bytes(public_key_hex.decode('utf-8'), encoding='utf-8'), encoder=nacl.encoding.HexEncoder)
+        ap_signature = cherrypy.session['private_key'].sign(bytes(cherrypy.session['public_key_hex'].decode('utf-8') + username, encoding='utf-8'),
+                                                            encoder=nacl.encoding.HexEncoder)
+        ping_signature = cherrypy.session['private_key'].sign(bytes(cherrypy.session['public_key_hex'].decode('utf-8'), encoding='utf-8'),
+                                                              encoder=nacl.encoding.HexEncoder)
 
         payload = {
             'add_pubkey':
-                {'pubkey': public_key_hex.decode('utf-8'),
+                {'pubkey': cherrypy.session['public_key_hex'].decode('utf-8'),
                  'username': username,
                  'signature': ap_signature.signature.decode('utf-8')},
             'ping':
-                {'pubkey': public_key_hex.decode('utf-8'),
+                {'pubkey': cherrypy.session['public_key_hex'].decode('utf-8'),
                  'signature': ping_signature.signature.decode('utf-8')},
             'report':
-                {'connection_address': ip + ':' + str(listen_port),
+                {'connection_address': cherrypy.session['ip'] + ':' + str(listen_port),
                  'connection_location': location,
-                 'incoming_pubkey': public_key_hex.decode('utf-8'),
+                 'incoming_pubkey': cherrypy.session['public_key_hex'].decode('utf-8'),
                  'status': status[0]}
         }
 
-        global pubkey_response
-        apikey_response = Data.get(urls['load_new_apikey'], headers, 5)
+        apikey_response = Data.get(urls['load_new_apikey'], cherrypy.session['headers'], 5)
 
         Data.create_api_headers(username, apikey_response['api_key'])
 
-        pubkey_response = Data.post(urls['add_pubkey'], headers, payload['add_pubkey'], 5)
-        ping_response = Data.post(urls['ping'], headers, payload['ping'], 5)
-        report_response = Data.post(urls['report'], headers, payload['report'], 5)
+        cherrypy.session['pubkey_response'] = Data.post(urls['add_pubkey'], cherrypy.session['headers'], payload['add_pubkey'], 5)
+        ping_response = Data.post(urls['ping'], cherrypy.session['headers'], payload['ping'], 5)
+        report_response = Data.post(urls['report'], cherrypy.session['headers'], payload['report'], 5)
 
         if report_response['response'] == 'ok':
             return 0
@@ -363,7 +316,7 @@ class Data(object):
 
     @staticmethod
     def receive_message(message):
-        unsealed_box = nacl.public.SealedBox(private_key.to_curve25519_private_key())
+        unsealed_box = nacl.public.SealedBox(cherrypy.session['private_key'].to_curve25519_private_key())
         decoded_message = unsealed_box.decrypt(message['encrypted_message'].encode('utf-8'), encoder=nacl.encoding.HexEncoder).decode('utf-8')
         message_tuple = (message['loginserver_record'], message['target_pubkey'], message['target_username'], decoded_message,
                          message['sender_created_at'], message['signature'])
