@@ -16,7 +16,7 @@ listen_ip = "0.0.0.0"
 listen_port = 1233
 
 connection = {'lab': '0', 'wifi': '1', 'world': '2'}
-word_filter = {'fuck': '****', 'shit': '****', 'cunt': '****'}
+word_filter = {'fuck': 'f**k', 'shit': 's**t', 'cunt': 'c**t'}
 status = ['online', 'away', 'busy', 'offline']
 
 urls = {
@@ -39,7 +39,7 @@ class API(object):
     @cherrypy.tools.json_out()
     def rx_privatemessage(self):
         message = cherrypy.request.json
-        Data.receive_message(message)
+        Data.store_message(message)
         return {'response': 'ok'}
 
     @cherrypy.expose
@@ -47,7 +47,7 @@ class API(object):
     @cherrypy.tools.json_out()
     def rx_broadcast(self):
         broadcast = cherrypy.request.json
-        Data.receive_broadcast(broadcast)
+        Data.store_broadcast(broadcast)
         return {'response': 'ok'}
 
     @cherrypy.expose
@@ -125,9 +125,8 @@ class MainApp(object):
         broadcasts = db.get_broadcast()
         broadcast_list = []
         for broadcast in broadcasts:
-            broadcast_list.append(broadcast['username'] + ' (' + broadcast['sender_created_at'] + ') -' + broadcast['message'])
+            broadcast_list.append(broadcast['username'] + ' (' + broadcast['sender_created_at'] + ') -' + Data.filter_words(broadcast['message']))
         return json.dumps(broadcast_list)
-
 
     @cherrypy.expose
     def update_message(self):
@@ -137,7 +136,21 @@ class MainApp(object):
         message_list = []
         for message in messages:
             try:
-                message_list.append(unsealed_box.decrypt(message['message'].encode('utf-8'), encoder=nacl.encoding.HexEncoder).decode('utf-8'))
+                disp_msg = message['sender_username']
+                disp_msg += ' -> '
+                disp_msg += message['target_username']
+                disp_msg += ' ('
+                disp_msg += message['sender_created_at']
+                disp_msg += ') -'
+                try:
+                    disp_msg += Data.filter_words(unsealed_box.decrypt(message['message'].encode('utf-8'), encoder=nacl.encoding.HexEncoder).decode('utf-8'))
+                    message_list.append(disp_msg)
+                except:
+                    try:
+                        disp_msg += Data.filter_words(message['message'].decode('utf-8'))
+                        message_list.append(disp_msg)
+                    except:
+                        pass
             except:
                 pass
         return json.dumps(message_list)
@@ -167,6 +180,12 @@ class MainApp(object):
 class Data(object):
 
     @staticmethod
+    def filter_words(message):
+        for key in word_filter:
+            message = message.replace(key, word_filter[key])
+        return message
+
+    @staticmethod
     def pm(message, user_name):
         admin = next(item for item in cherrypy.session['user_list']['users'] if item['username'] == user_name)
         message1 = message.encode('utf-8')
@@ -192,6 +211,8 @@ class Data(object):
             'signature': pm_signature.signature.decode('utf-8')
         }
         pm_response = Data.post('http://' + admin['connection_address'] + '/api/rx_privatemessage', cherrypy.session['headers'], pm_payload, 5)
+        pm_payload['encrypted_message'] = message1
+        Data.store_message(pm_payload)
         print(pm_response)
 
     @staticmethod
@@ -326,12 +347,12 @@ class Data(object):
         return json_object
 
     @staticmethod
-    def receive_message(message):
+    def store_message(message):
         message_tuple = (message['loginserver_record'], message['target_pubkey'], message['target_username'], message['encrypted_message'],
                          message['sender_created_at'], message['signature'])
         db.insert_message(message_tuple)
 
     @staticmethod
-    def receive_broadcast(broadcast):
+    def store_broadcast(broadcast):
         broadcast_tuple = (broadcast['loginserver_record'], broadcast['message'], broadcast['sender_created_at'], broadcast['signature'])
         db.insert_broadcast(broadcast_tuple)

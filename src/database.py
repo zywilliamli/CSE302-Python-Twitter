@@ -74,12 +74,17 @@ class Database(object):
 
         for message in messages:
             message_dict = {}
-
+            loginserver_record_list = message[0].split(',')
+            message_dict['sender_username'] = loginserver_record_list[0]
+            message_dict['pubkey'] = loginserver_record_list[1]
+            message_dict['server_time'] = loginserver_record_list[2]
+            message_dict['signature'] = loginserver_record_list[3]
             message_dict['message'] = message[3]
-            message_dict['sender_username'] = message[1]
-            message_dict['target_username'] = message[0]
-            message_dict['sender_created_at'] = message[2]
-            message_dict['target_pubkey'] = message[5]
+
+            message_dict['target_username'] = message[2]
+            message_dict['target_pubkey'] = message[1]
+            message_dict['sender_created_at'] = datetime.fromtimestamp(float(message[4])).strftime('%Y-%m-%d %H:%M:%S')
+            message_dict['signature'] = message[5]
 
             message_dict_list.append(message_dict)
 
