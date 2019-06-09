@@ -83,6 +83,7 @@ class MainApp(object):
     # LOGGING IN AND OUT
     @cherrypy.expose
     def signin(self, username=None, password=None, location=None):
+
         """Check their name and password and send them either to the main page, or back to the main login screen."""
         error = Data.authorise_user_login(username, password, location)
         if error == 0:
@@ -94,7 +95,16 @@ class MainApp(object):
     @cherrypy.expose
     def signout(self):
         """Logs the current user out, expires their session"""
-        print('logging out')
+
+        # del cherrypy.session['username']
+        # del cherrypy.session['user_list']
+        # del cherrypy.session['ip']
+        # del cherrypy.session['headers']
+        # del cherrypy.session['private_key']
+        # del cherrypy.session['public_key']
+        # del cherrypy.session['public_key_hex']
+        # del cherrypy.session['pubkey_response']
+
         error = Data.user_logout()
         return error
 
@@ -115,16 +125,21 @@ class MainApp(object):
         broadcasts = db.get_broadcast()
         broadcast_list = []
         for broadcast in broadcasts:
-            broadcast_list.append(broadcast['message'])
+            broadcast_list.append(broadcast['username'] + ' (' + broadcast['sender_created_at'] + ') -' + broadcast['message'])
         return json.dumps(broadcast_list)
+
 
     @cherrypy.expose
     def update_message(self):
+        unsealed_box = nacl.public.SealedBox(cherrypy.session['private_key'].to_curve25519_private_key())
 
         messages = db.get_message()
         message_list = []
         for message in messages:
-            message_list.append(message['message'])
+            try:
+                message_list.append(unsealed_box.decrypt(message['message'].encode('utf-8'), encoder=nacl.encoding.HexEncoder).decode('utf-8'))
+            except:
+                pass
         return json.dumps(message_list)
 
     @cherrypy.expose
@@ -136,10 +151,6 @@ class MainApp(object):
     def sendMessage(self, data, name):
         Data.pm(data, name)
         return '0'
-
-    @cherrypy.expose
-    def getMessage(self):
-        return db.get_message()[0]['message']
 
     @cherrypy.expose
     def ping_check(self):
@@ -316,9 +327,7 @@ class Data(object):
 
     @staticmethod
     def receive_message(message):
-        unsealed_box = nacl.public.SealedBox(cherrypy.session['private_key'].to_curve25519_private_key())
-        decoded_message = unsealed_box.decrypt(message['encrypted_message'].encode('utf-8'), encoder=nacl.encoding.HexEncoder).decode('utf-8')
-        message_tuple = (message['loginserver_record'], message['target_pubkey'], message['target_username'], decoded_message,
+        message_tuple = (message['loginserver_record'], message['target_pubkey'], message['target_username'], message['encrypted_message'],
                          message['sender_created_at'], message['signature'])
         db.insert_message(message_tuple)
 

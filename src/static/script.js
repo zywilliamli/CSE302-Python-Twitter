@@ -5,8 +5,6 @@ $(document).ready(function() {
     var time = "00:00:00";
     var d = new Date();
 
-
-
    setInterval(ping_check, 60000)
     function ping_check(){
         if (logged_in == true){
@@ -90,28 +88,6 @@ $(document).ready(function() {
         e.preventDefault();
     });
 
-   (function poll(){
-       setTimeout(function(){
-          $.ajax({  url: "/getMessage", success: function(data){
-            //Update your dashboard gauge
-
-            var temp = data.split("%");
-            if (time != temp[temp.length - 2]){
-                for(var i = 1; i < temp.length - 1;i+=3){
-                    if(temp[i+2] > time){
-                    time = temp[i+2];
-                    addMessage("peer",temp[i],temp[i+2],temp[i+1]);
-                    $('#The-Msg').scrollTop($('#The-Msg')[0].scrollHeight);
-                    }
-                }
-
-            }
-            //Setup the next poll recursively
-            poll();
-           }, dataType: "text"});
-        }, 10000);
-    })();
-
       function usrUpdate(){
       $.ajax({ url: "/update_users" , success: function(data) {
             var obj = JSON.parse(data);
@@ -156,6 +132,7 @@ $(document).ready(function() {
        setTimeout(function(){
           $.ajax({ url: "/update_broadcast" , success: function(data) {
             var obj = JSON.parse(data);
+            document.getElementById("broadcast_message").innerHTML = "<h2 onclick = 'JavaScript:reset();'></h2>";
             for(var key in obj){
                 document.getElementById("broadcast_message").innerHTML += "<p>"+obj[key]+"</p>"
             }
@@ -167,12 +144,13 @@ $(document).ready(function() {
        setTimeout(function(){
           $.ajax({ url: "/update_message" , success: function(data) {
             var obj = JSON.parse(data);
+            document.getElementById("message").innerHTML = "<h2 onclick = 'JavaScript:reset();'></h2>";
             for(var key in obj){
                 document.getElementById("message").innerHTML += "<p>"+obj[key]+"</p>"
             }
             updateMessages();
         }, datatype: "text"});
-        },20000);})();
+        },5000);})();
 
 });
 
