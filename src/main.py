@@ -18,7 +18,7 @@ import server
 
 # The address we listen for connections on
 LISTEN_IP = "0.0.0.0"
-LISTEN_PORT = 1234
+LISTEN_PORT = 1233
 
 
 def runMainApp():
@@ -29,7 +29,7 @@ def runMainApp():
             'tools.encode.on': True,
             'tools.encode.encoding': 'utf-8',
             'tools.sessions.on': True,
-            'tools.sessions.timeout': 60 * 1,  # timeout is in minutes, * 60 to get hours
+            'tools.sessions.timeout': 60 * 10,  # timeout is in minutes
 
             # The default session backend is in RAM. Other options are 'file',
             # 'postgres', 'memcached'. For example, uncomment:
@@ -56,6 +56,7 @@ def runMainApp():
 
     # Create an instance of MainApp and tell Cherrypy to send all requests under / to it. (ie all of them)
     cherrypy.tree.mount(server.MainApp(), "/", conf)
+    cherrypy.tree.mount(server.API(), "/api/", conf)
 
     # Tell cherrypy where to listen, and to turn autoreload on
     cherrypy.config.update({'server.socket_host': LISTEN_IP,

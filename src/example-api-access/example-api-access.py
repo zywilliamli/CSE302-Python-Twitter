@@ -1,7 +1,7 @@
 import urllib.request
 import json
 
-url = "http://cs302.kiwi.land/api/ping"
+url = "http://cs302.kiwi.land/api/list_users"
 
 # create request and open it into a response object
 req = urllib.request.Request(url)

@@ -3,8 +3,6 @@ import json
 import base64
 import nacl.encoding
 import nacl.signing
-from nacl.public import *
-import time
 
 
 def __post(url, headers, payload):
@@ -79,43 +77,14 @@ urls = {
     'load_new_apikey': "http://cs302.kiwi.land/api/load_new_apikey",
     'add_pubkey': "http://cs302.kiwi.land/api/add_pubkey",
     'ping': "http://cs302.kiwi.land/api/ping",
-    'report': "http://cs302.kiwi.land/api/report",
-    'list_users': "http://cs302.kiwi.land/api/list_users",
-    'rx_privatemessage': "http://cs302.kiwi.land/api/rx_privatemessage"
+    'report': "http://cs302.kiwi.land/api/report"
 }
 
 apikey_response = __get(urls['load_new_apikey'], headers)
 pubkey_response = __post(urls['add_pubkey'], headers, payload['add_pubkey'])
 ping_response = __post(urls['ping'], headers, payload['ping'])
 report_response = __post(urls['report'], headers, payload['report'])
-
-user_list = __get(urls['list_users'], headers)
-print(user_list)
-
-target_username = 'admin'
-admin = next(item for item in user_list['users'] if item['username'] == target_username)
-
-message1 = b'lol'
-
-verifykey = nacl.signing.VerifyKey(admin['incoming_pubkey'], encoder=nacl.encoding.HexEncoder)
-publickey = verifykey.to_curve25519_public_key()
-privatekey = private_key.to_curve25519_private_key()
-sealed_box = nacl.public.SealedBox(publickey)
-encrypted = sealed_box.encrypt(message1, encoder=nacl.encoding.HexEncoder)
-message = encrypted.decode('utf-8')
-
-pm_signature = private_key.sign(
-    bytes(pubkey_response['loginserver_record'] + admin['incoming_pubkey'] + admin['username'] + message + str(time.time()), encoding='utf-8'),
-    encoder=nacl.encoding.HexEncoder)
-
-pm_payload = {
-    'loginserver_record': pubkey_response['loginserver_record'],
-    'target_pubkey': admin['incoming_pubkey'],
-    'target_username': admin['username'],
-    'encrypted_message': message,
-    'sender_created_at': str(time.time()),
-    'signature': pm_signature.signature.decode('utf-8')
-}
-
-pm_response = __post(urls['rx_privatemessage'], headers, pm_payload)
-print(pm_response)
+print(apikey_response)
+print(pubkey_response)
+print(ping_response)
+print(report_response)

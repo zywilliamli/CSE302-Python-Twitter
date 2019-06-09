@@ -1,0 +1,93 @@
+<style>
+    #messages {
+     width:350px;
+     float:left;
+     padding:10px;
+    }
+
+    #msg {
+      float:bottom;
+    }
+
+    #The-Msg {
+      display: true;
+      padding:10px;
+      background-color:#191919;
+      top: 50%;
+      left: 50%;
+      color: white;
+      overflow-y: scroll;
+      line-height:30px;
+      height:325px;
+    }
+
+    #Broadcast {
+      display: true;
+      padding:10px;
+      background-color:GREY;
+      top: 50%;
+      left: 50%;
+      color: white;
+      overflow-y: scroll;
+      line-height:30px;
+      height:325px;
+    }
+
+    #MainWindow {
+     display: none;
+    }
+
+    #LoginScreen {
+      text-align:center;
+      display: true;
+      padding:10px;
+      background-color:#191919;
+      height: 10vh;
+      top: 50%;
+      left: 50%;
+      color: white;
+    }
+
+    #Header {
+        background-color:black;
+        color:white;
+        text-align:center;
+        padding:5px;
+    }
+
+    #UserList {
+        line-height:30px;
+        background-color:#eeeeee;
+        height:85vh;
+        width:150px;
+        float:left;
+        padding:5px;
+        overflow-y: scroll;
+    }
+
+    #footer {
+        background-color:black;
+        color:white;
+        text-align:center;
+        padding:5px;
+        background-color:black;
+        text-align:center;
+        float:bottom;
+    }
+
+    #user {
+     color:white;
+    }
+
+    #peer {
+     color:grey;
+    }
+
+    #ChatLog {
+      padding:20px;
+    }
+
+    #time{
+      color = #A9A9A9;
+    }
+</style>

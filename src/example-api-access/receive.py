@@ -79,7 +79,7 @@ urls = {
     'add_pubkey': "http://cs302.kiwi.land/api/add_pubkey",
     'ping': "http://cs302.kiwi.land/api/ping",
     'report': "http://cs302.kiwi.land/api/report",
-    'broadcast': "http://cs302.kiwi.land/api/rx_broadcast"
+    'checkmessages': "http://cs302.kiwi.land/api/checkmessages"
 }
 
 apikey_response = __get(urls['load_new_apikey'], headers)
@@ -87,14 +87,11 @@ pubkey_response = __post(urls['add_pubkey'], headers, payload['add_pubkey'])
 ping_response = __post(urls['ping'], headers, payload['ping'])
 report_response = __post(urls['report'], headers, payload['report'])
 
-broadcast_message = 'yeeeeet'
-broadcast_signature = private_key.sign(bytes(pubkey_response['loginserver_record'] + broadcast_message + str(time.time()), encoding='utf-8'),
-                                       encoder=nacl.encoding.HexEncoder)
+time_since = time.time() - 86400
 
-broadcast_payload = {'loginserver_record': pubkey_response['loginserver_record'],
-                     'message': broadcast_message,
-                     'sender_created_at': str(time.time()),
-                     'signature': broadcast_signature.signature.decode('utf-8')}
+checkmessages = {
+    'since': time_since
+}
 
-broadcast_response = __post(urls['broadcast'], headers, broadcast_payload)
-print(broadcast_response)
+checkmessage_response = __post(urls['checkmessages'], headers, checkmessages)
+print(checkmessage_response)
