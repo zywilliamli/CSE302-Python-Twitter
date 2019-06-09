@@ -58,10 +58,10 @@
     #UserList {
         line-height:30px;
         background-color:#eeeeee;
-        height:85vh;
-        width:150px;
+        height:80vh;
+        max-width:200px;
         float:left;
-        padding:5px;
+        padding:10px;
         overflow-y: scroll;
     }
 

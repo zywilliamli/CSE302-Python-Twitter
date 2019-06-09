@@ -8,17 +8,17 @@ databasePath = "database.db"
 class Database(object):
 
     def __init__(self):
-        self.createTables()
+        self.create_tables()
 
-    def openConnection(self):
+    def connect_db(self):
         try:
             return sqlite3.connect(databasePath)
-        except Error as e:
+        except Error:
             print("database connection error")
             return None
 
-    def createTables(self):
-        connection = self.openConnection()
+    def create_tables(self):
+        connection = self.connect_db()
         cursor = connection.cursor()
         cursor.execute("CREATE TABLE IF NOT EXISTS BROADCASTS(loginserver_record text, message text, sender_created_at text, signature text)")
         cursor.execute(
@@ -26,58 +26,61 @@ class Database(object):
         connection.commit()
         connection.close()
 
-    def insertBroadcast(self, broadcastTuple):
-        connection = self.openConnection()
+    def insert_broadcast(self, broadcast):
+        connection = self.connect_db()
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO BROADCASTS VALUES(?,?,?,?)", broadcastTuple)
+        cursor.execute("INSERT INTO BROADCASTS VALUES(?,?,?,?)", broadcast)
         connection.commit()
         connection.close()
 
-    def insertMessage(self, messageTuple):
-        connection = self.openConnection()
+    def insert_message(self, message):
+        connection = self.connect_db()
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO MESSAGES VALUES(?,?,?,?,?,?)", messageTuple)
+        cursor.execute("INSERT INTO MESSAGES VALUES(?,?,?,?,?,?)", message)
         connection.commit()
         connection.close()
 
-    def getAllBroadcasts(self):
-        connection = self.openConnection()
+    def get_broadcast(self):
+        connection = self.connect_db()
         cursor = connection.cursor()
         cursor.execute("SELECT * FROM BROADCASTS b ORDER BY b.sender_created_at DESC")
-        rows = cursor.fetchall()
-        for i, row in enumerate(rows):
-            broadcastDict = {}
+        broadcasts = cursor.fetchall()
+        broadcast_dict_list = []
 
-            loginserver_record_list = row[0].split(',')
-            broadcastDict['username'] = loginserver_record_list[0]
-            broadcastDict['pubkey'] = loginserver_record_list[1]
-            broadcastDict['server_time'] = loginserver_record_list[2]
-            broadcastDict['signature'] = loginserver_record_list[3]
+        for broadcast in broadcasts:
+            broadcast_dict = {}
+            loginserver_record_list = broadcast[0].split(',')
+            broadcast_dict['username'] = loginserver_record_list[0]
+            broadcast_dict['pubkey'] = loginserver_record_list[1]
+            broadcast_dict['server_time'] = loginserver_record_list[2]
+            broadcast_dict['signature'] = loginserver_record_list[3]
 
-            broadcastDict['message'] = row[1]
-            sender_created_at = float(row[2])
+            broadcast_dict['message'] = broadcast[1]
+            sender_created_at = float(broadcast[2])
             formatted_sender_created_at = datetime.fromtimestamp(sender_created_at).strftime('%Y-%m-%d %H:%M:%S')
-            broadcastDict['sender_created_at'] = formatted_sender_created_at
-            broadcastDict['message_signature'] = row[3]
-            rows[i] = broadcastDict
+            broadcast_dict['sender_created_at'] = formatted_sender_created_at
+            broadcast_dict['message_signature'] = broadcast[3]
 
-        return rows
+            broadcast_dict_list.append(broadcast_dict)
 
-    def getMessageHistory(self):
-        connection = self.openConnection()
+        return broadcast_dict_list
+
+    def get_message(self):
+        connection = self.connect_db()
         cursor = connection.cursor()
         cursor.execute("SELECT * FROM MESSAGES ")
-        rows = cursor.fetchall()
+        messages = cursor.fetchall()
+        message_dict_list = []
 
-        for i, row in enumerate(rows):
-            messageDict = {}
+        for message in messages:
+            message_dict = {}
 
-            messageDict['message'] = row[3]
-            messageDict['sender_username'] = row[1]
-            messageDict['target_username'] = row[0]
-            messageDict['sender_created_at'] = row[2]
-            messageDict['target_pubkey'] = row[5]
+            message_dict['message'] = message[3]
+            message_dict['sender_username'] = message[1]
+            message_dict['target_username'] = message[0]
+            message_dict['sender_created_at'] = message[2]
+            message_dict['target_pubkey'] = message[5]
 
-            rows[i] = messageDict
+            message_dict_list.append(message_dict)
 
-        return rows
+        return message_dict_list

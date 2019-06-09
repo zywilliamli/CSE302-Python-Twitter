@@ -43,8 +43,8 @@ urls = {
 }
 
 db = Database()
-db.openConnection()
-db.createTables()
+db.connect_db()
+db.create_tables()
 
 
 class API(object):
@@ -107,8 +107,8 @@ class MainApp(object):
         cherrypy.response.status = 404
         template = env.get_template('page.html')
 
-        broadcasts = db.getAllBroadcasts()
-        messages = db.getMessageHistory()
+        broadcasts = db.get_broadcast()
+        messages = db.get_message()
 
         print(broadcasts)
 
@@ -118,17 +118,8 @@ class MainApp(object):
     def index(self):
         template = env.get_template('page.html')
 
-        broadcasts = db.getAllBroadcasts()
-        messages = db.getMessageHistory()
-
-        return template.render(broadcasts=broadcasts, messages=messages)
-
-    @cherrypy.expose
-    def refreshBroadcast(self):
-        template = env.get_template('page.html')
-
-        broadcasts = db.getAllBroadcasts()
-        messages = db.getMessageHistory()
+        broadcasts = db.get_broadcast()
+        messages = db.get_message()
 
         return template.render(broadcasts=broadcasts, messages=messages)
 
@@ -156,16 +147,36 @@ class MainApp(object):
         return error
 
     @cherrypy.expose
-    def getUsers(self):
+    def update_users(self):
         try:
             user_list = Data.get_user_list()
-            print(user_list)
             upi_list = []
             for user in user_list['users']:
                 upi_list.append(user['username'])
+            print(upi_list)
             return json.dumps(upi_list)
         except:
             return '1'
+
+    @cherrypy.expose
+    def update_broadcast(self):
+
+        broadcasts = db.get_broadcast()
+        broadcast_list = []
+        for broadcast in broadcasts:
+            broadcast_list.append(broadcast['message'])
+        print(broadcast_list)
+        return json.dumps(broadcast_list)
+
+    @cherrypy.expose
+    def update_message(self):
+
+        messages = db.get_message()
+        message_list = []
+        for message in messages:
+            message_list.append(message['message'])
+        print(message_list)
+        return json.dumps(message_list)
 
     @cherrypy.expose
     def broadcast(self, data):
@@ -180,19 +191,17 @@ class MainApp(object):
     @cherrypy.expose
     def getMessage(self):
         # pass
-        print(db.getMessageHistory())
-        return db.getMessageHistory()[0]['message']
+        print(db.get_message())
+        return db.get_message()[0]['message']
 
     @cherrypy.expose
     def ping_check(self):
         ping_payload = {'my_time': str(time.time()), 'connection_address': ip + ':' + str(listen_port), 'connection_location': connection['wifi']}
         for user in user_list['users']:
-            print(user)
             try:
-                ping_response = Data.post('http://' + user['connection_address'] + '/api/rx_broadcast', headers, ping_payload)
+                ping_response = Data.post('http://' + user['connection_address'] + '/api/ping_check', headers, ping_payload, 0.2)
                 print(ping_response)
             except:
-                print('excepted')
                 pass
 
 
@@ -200,8 +209,8 @@ class Data(object):
 
     @staticmethod
     def pm(message, user_name):
-        # admin = next(item for item in user_list['users'] if item['username'] == user_name)
-        admin = user_list['users'][int(user_name)]
+        admin = next(item for item in user_list['users'] if item['username'] == user_name)
+        # admin = user_list['users'][user_name]
         message1 = message.encode('utf-8')
 
         verifykey = nacl.signing.VerifyKey(admin['incoming_pubkey'], encoder=nacl.encoding.HexEncoder)
@@ -223,13 +232,13 @@ class Data(object):
             'sender_created_at': str(time.time()),
             'signature': pm_signature.signature.decode('utf-8')
         }
-        pm_response = Data.post('http://' + admin['connection_address'] + '/api/rx_privatemessage', headers, pm_payload)
+        pm_response = Data.post('http://' + admin['connection_address'] + '/api/rx_privatemessage', headers, pm_payload, 5)
         print(pm_response)
 
     @staticmethod
     def get_user_list():
         global user_list
-        user_list = Data.get(urls['list_users'], headers)
+        user_list = Data.get(urls['list_users'], headers, 5)
         return user_list
 
     @staticmethod
@@ -245,7 +254,7 @@ class Data(object):
         for user in user_list['users']:
             print(user['username'])
             try:
-                broadcast_response = Data.post('http://' + user['connection_address'] + '/api/rx_broadcast', headers, broadcast_payload)
+                broadcast_response = Data.post('http://' + user['connection_address'] + '/api/rx_broadcast', headers, broadcast_payload, 1)
                 print(broadcast_response)
             except:
                 print('excepted')
@@ -258,7 +267,7 @@ class Data(object):
                    'incoming_pubkey': public_key_hex.decode('utf-8'),
                    'status': status[3]}
 
-        report_response = Data.post(urls['report'], headers, payload)
+        report_response = Data.post(urls['report'], headers, payload, 5)
 
         if report_response['response'] == 'ok':
             return '0'
@@ -285,6 +294,7 @@ class Data(object):
     # Functions only after here
     @staticmethod
     def authorise_user_login(username, password, location):
+        print(location)
         Data.create_headers(username, password)
 
         ap_signature = private_key.sign(bytes(public_key_hex.decode('utf-8') + username, encoding='utf-8'), encoder=nacl.encoding.HexEncoder)
@@ -300,29 +310,19 @@ class Data(object):
                  'signature': ping_signature.signature.decode('utf-8')},
             'report':
                 {'connection_address': ip + ':' + str(listen_port),
-                 'connection_location': connection['wifi'],
+                 'connection_location': location,
                  'incoming_pubkey': public_key_hex.decode('utf-8'),
                  'status': status[0]}
         }
 
         global pubkey_response
-        apikey_response = Data.get(urls['load_new_apikey'], headers)
+        apikey_response = Data.get(urls['load_new_apikey'], headers, 5)
 
         Data.create_api_headers(username, apikey_response['api_key'])
 
-        pubkey_response = Data.post(urls['add_pubkey'], headers, payload['add_pubkey'])
-        ping_response = Data.post(urls['ping'], headers, payload['ping'])
-        report_response = Data.post(urls['report'], headers, payload['report'])
-        print("----------------------------------------------------------------")
-        print("apikey_response")
-        print(apikey_response)
-        print("pubkey_response")
-        print(pubkey_response)
-        print("ping_response")
-        print(ping_response)
-        print("report_response")
-        print(report_response)
-        print("----------------------------------------------------------------")
+        pubkey_response = Data.post(urls['add_pubkey'], headers, payload['add_pubkey'], 5)
+        ping_response = Data.post(urls['ping'], headers, payload['ping'], 5)
+        report_response = Data.post(urls['report'], headers, payload['report'], 5)
 
         if report_response['response'] == 'ok':
             return 0
@@ -330,12 +330,12 @@ class Data(object):
             return 1
 
     @staticmethod
-    def post(url, headers, payload):
+    def post(url, headers, payload, timeout):
         payload_data = json.dumps(payload).encode('utf-8')
 
         try:
             req = urllib.request.Request(url, data=payload_data, headers=headers)
-            response = urllib.request.urlopen(req, timeout=1)
+            response = urllib.request.urlopen(req, timeout=timeout)
             data = response.read()  # read the received bytes
             encoding = response.info().get_content_charset('utf-8')  # load encoding if possible (default to utf-8)
             response.close()
@@ -347,10 +347,10 @@ class Data(object):
         return json_object
 
     @staticmethod
-    def get(url, headers):
+    def get(url, headers, timeout):
         try:
             req = urllib.request.Request(url, headers=headers)
-            response = urllib.request.urlopen(req, timeout=1)
+            response = urllib.request.urlopen(req, timeout=timeout)
             data = response.read()  # read the received bytes
             encoding = response.info().get_content_charset('utf-8')  # load encoding if possible (default to utf-8)
             response.close()
@@ -367,9 +367,9 @@ class Data(object):
         decoded_message = unsealed_box.decrypt(message['encrypted_message'].encode('utf-8'), encoder=nacl.encoding.HexEncoder).decode('utf-8')
         message_tuple = (message['loginserver_record'], message['target_pubkey'], message['target_username'], decoded_message,
                          message['sender_created_at'], message['signature'])
-        db.insertMessage(message_tuple)
+        db.insert_message(message_tuple)
 
     @staticmethod
     def receive_broadcast(broadcast):
         broadcast_tuple = (broadcast['loginserver_record'], broadcast['message'], broadcast['sender_created_at'], broadcast['signature'])
-        db.insertBroadcast(broadcast_tuple)
+        db.insert_broadcast(broadcast_tuple)

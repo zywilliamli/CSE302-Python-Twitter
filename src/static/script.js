@@ -5,15 +5,17 @@ $(document).ready(function() {
     var time = "00:00:00";
     var d = new Date();
 
-    function addMessage(type,name,time,message){
-        document.getElementById("conversation").innerHTML += '<li id='+type+'><div id="message"><time id = "time">'+name+' - '+time+'</time> <br> <strong>'+message+'</strong></div></li><br>'
+
+
+   setInterval(ping_check, 60000)
+    function ping_check(){
+        if (logged_in == true){
+            $.post('/ping_check', function(data){
+            });
+        }
     }
 
-   setInterval(ping_check, 5000)
-    function ping_check(){
-        $.post('/ping_check', function(data){
-        });
-    }
+
    setInterval(load_page, 1000)
     function load_page(){
         console.log(logged_in)
@@ -27,16 +29,10 @@ $(document).ready(function() {
         }
     }
 
-
-
     $("#sendMessage").click(function(e) {
         $.post("/sendMessage", {"data": $("input[name='MsgS']").val(), "name": $("input[name='NmeS']").val()}).done(function(string) {
             if(string == '0'){
                 alert("Message Sent!" );
-
-                $("#The-Msg").show();
-                addMessage("user",userName,d.getHours()+":"+d.getMinutes()+":"+d.getSeconds(),document.getElementById("msg").value);
-                $('#The-Msg').scrollTop($('#The-Msg')[0].scrollHeight);
             }else{
                 alert("!*MESSAGE FAILED TO SEND*!" );
             }
@@ -48,10 +44,6 @@ $(document).ready(function() {
         $.post("/broadcast", {"data": $("input[name='MsgB']").val()}).done(function(string) {
             if(string == '0'){
                 alert("Broadcast Sent!" );
-
-                $("#Broadcast").show();
-                addMessage("user",userName,d.getHours()+":"+d.getMinutes()+":"+d.getSeconds(),document.getElementById("msg").value);
-                $('#Broadcast').scrollTop($('#Broadcast')[0].scrollHeight);
             }else{
                 alert("!*Broadcast FAILED TO SEND*!" );
             }
@@ -59,19 +51,15 @@ $(document).ready(function() {
         e.preventDefault();
     });
 
-//    $("#logout").click(function(e) {
-//        $.post('/signout', function(data){
-////            $(".index").html(data)
-//        });
-//        $.post("/sendFile", {"fileName": $("input[name='file']").val(), "name": $("input[name='NmeS']").val()}).done(function(string) {
-//            if(string == '0'){
-//                alert("File Sent Successfully" );
-//            }else{
-//                alert("Failed to Send" );
-//            }
-//        });
-//        e.preventDefault();
-//    });
+    $("#logout").click(function(e) {
+        $.post('/signout', function(data){
+            if (data == '0'){
+                logged_in = false
+            }
+//            $(".index").html(data)
+        });
+        e.preventDefault();
+    });
 
     $("#reset").click(function(e) {
         document.getElementById("p1").innerHTML = " "
@@ -92,20 +80,12 @@ $(document).ready(function() {
                 $("#MainWindow").show();
                 logged_in = true
                 usrUpdate()
+                broadcastUpdate()
+                messageUpdate()
             }else{
                 logged_in = false
-
                 alert("Invalid Username or Password");
                 }
-        });
-        e.preventDefault();
-    });
-
-    $("#refresh").click(function(e) {
-        $.post('/refreshBroadcast', function(data){
-            $(".refreshBroadcast").html(data)
-            usrUpdate()
-
         });
         e.preventDefault();
     });
@@ -133,26 +113,64 @@ $(document).ready(function() {
     })();
 
       function usrUpdate(){
-      $.ajax({ url: "/getUsers" , success: function(data) {
+      $.ajax({ url: "/update_users" , success: function(data) {
             var obj = JSON.parse(data);
             document.getElementById("UserList").innerHTML = "<h2 onclick = 'JavaScript:reset();'>USERS</h2>";
             for(var key in obj){
-                //document.getElementById("UserList").innerHTML += '<p>'+Object.keys(obj)[0]+'</p>'
-                document.getElementById("UserList").innerHTML += "<p onclick = document.getElementById('sendName').value="+"'"+key+"'"+'>'+key+" : "+obj[key]+"</p>"
+                document.getElementById("UserList").innerHTML += "<p onclick = document.getElementById('sendName').value="+"'"+obj[key]+"'"+'>'+obj[key]+"</p>"
+            }
+        }, datatype: "text"})
+      }
+
+      function broadcastUpdate(){
+      $.ajax({ url: "/update_broadcast" , success: function(data) {
+            var obj = JSON.parse(data);
+            for(var key in obj){
+                document.getElementById("broadcast_message").innerHTML += "<p>"+obj[key]+"</p>"
+            }
+        }, datatype: "text"})
+      }
+
+      function messageUpdate(){
+      $.ajax({ url: "/update_message" , success: function(data) {
+            var obj = JSON.parse(data);
+            for(var key in obj){
+                document.getElementById("message").innerHTML += "<p>"+obj[key]+"</p>"
             }
         }, datatype: "text"})
       }
 
      (function updateUsers(){
        setTimeout(function(){
-          $.ajax({ url: "/getUsers" , success: function(data) {
+          $.ajax({ url: "/update_users" , success: function(data) {
             var obj = JSON.parse(data);
             document.getElementById("UserList").innerHTML = "<h2 onclick = 'JavaScript:reset();'>USERS</h2>";
             for(var key in obj){
-                //document.getElementById("UserList").innerHTML += '<p>'+Object.keys(obj)[0]+'</p>'
-                document.getElementById("UserList").innerHTML += "<p onclick = document.getElementById('sendName').value="+"'"+key+"'"+'>'+key+" : "+obj[key]+"</p>"
+                document.getElementById("UserList").innerHTML += "<p onclick = document.getElementById('sendName').value="+"'"+obj[key]+"'"+'>'+obj[key]+"</p>"
             }
             updateUsers();
+        }, datatype: "text"});
+        },20000);})();
+
+      (function updateBroadcast(){
+       setTimeout(function(){
+          $.ajax({ url: "/update_broadcast" , success: function(data) {
+            var obj = JSON.parse(data);
+            for(var key in obj){
+                document.getElementById("broadcast_message").innerHTML += "<p>"+obj[key]+"</p>"
+            }
+            updateBroadcast();
+        }, datatype: "text"});
+        },20000);})();
+
+     (function updateMessages(){
+       setTimeout(function(){
+          $.ajax({ url: "/update_message" , success: function(data) {
+            var obj = JSON.parse(data);
+            for(var key in obj){
+                document.getElementById("message").innerHTML += "<p>"+obj[key]+"</p>"
+            }
+            updateMessages();
         }, datatype: "text"});
         },20000);})();
 
