@@ -9,3 +9,5 @@
 1. Execute $python3 main.py
 1. Open browser and enter http://localhost:10000 for windows or http://0.0.0.0:10000 for linux
 1. Enjoy the client
+
+try the client with vtun547 and sbol998
