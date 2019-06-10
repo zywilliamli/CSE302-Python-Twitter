@@ -200,30 +200,31 @@ class Data(object):
 
     @staticmethod
     def pm(message, user_name):
-        user = next(item for item in cherrypy.session['user_list']['users'] if item['username'] == user_name)
-        encoded_message = message.encode('utf-8')
+        admin = next(item for item in cherrypy.session['user_list']['users'] if item['username'] == user_name)
+        message1 = message.encode('utf-8')
 
-        verifykey = nacl.signing.VerifyKey(user['incoming_pubkey'], encoder=nacl.encoding.HexEncoder)
+        verifykey = nacl.signing.VerifyKey(admin['incoming_pubkey'], encoder=nacl.encoding.HexEncoder)
         publickey = verifykey.to_curve25519_public_key()
         sealed_box = nacl.public.SealedBox(publickey)
-        encrypted_message = sealed_box.encrypt(encoded_message, encoder=nacl.encoding.HexEncoder).decode('utf-8')
+        encrypted = sealed_box.encrypt(message1, encoder=nacl.encoding.HexEncoder)
+        message = encrypted.decode('utf-8')
 
         pm_signature = cherrypy.session['private_key'].sign(
             bytes(
-                cherrypy.session['pubkey_response']['loginserver_record'] + user['incoming_pubkey'] + user['username'] + message + str(time.time()),
+                cherrypy.session['pubkey_response']['loginserver_record'] + admin['incoming_pubkey'] + admin['username'] + message + str(time.time()),
                 encoding='utf-8'),
             encoder=nacl.encoding.HexEncoder)
 
         pm_payload = {
             'loginserver_record': cherrypy.session['pubkey_response']['loginserver_record'],
-            'target_pubkey': user['incoming_pubkey'],
-            'target_username': user['username'],
-            'encrypted_message': encrypted_message,
+            'target_pubkey': admin['incoming_pubkey'],
+            'target_username': admin['username'],
+            'encrypted_message': message,
             'sender_created_at': str(time.time()),
             'signature': pm_signature.signature.decode('utf-8')
         }
-        pm_response = Data.post('http://' + user['connection_address'] + '/api/rx_privatemessage', cherrypy.session['headers'], pm_payload, 5)
-        pm_payload['encrypted_message'] = encoded_message
+        pm_response = Data.post('http://' + admin['connection_address'] + '/api/rx_privatemessage', cherrypy.session['headers'], pm_payload, 5)
+        pm_payload['encrypted_message'] = message1
         Data.store_message(pm_payload)
         print(pm_response)
 

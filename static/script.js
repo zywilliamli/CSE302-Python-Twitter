@@ -134,7 +134,7 @@ $(document).ready(function() {
             }
             updateUsers();
         }, datatype: "text"});
-        },20000);})();
+        },5000);})();
 
       (function updateBroadcast(){
        setTimeout(function(){
@@ -146,7 +146,7 @@ $(document).ready(function() {
             }
             updateBroadcast();
         }, datatype: "text"});
-        },20000);})();
+        },5000);})();
 
      (function updateMessages(){
        setTimeout(function(){
@@ -159,7 +159,7 @@ $(document).ready(function() {
             }
             updateMessages();
         }, datatype: "text"});
-        }},20000);})();
+        }},5000);})();
 
 });
 
