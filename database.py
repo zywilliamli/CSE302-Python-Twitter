@@ -43,7 +43,7 @@ class Database(object):
     def get_broadcast(self):
         connection = self.connect_db()
         cursor = connection.cursor()
-        cursor.execute("SELECT * FROM BROADCASTS b ORDER BY b.sender_created_at DESC")
+        cursor.execute("SELECT * FROM BROADCASTS ORDER BY sender_created_at DESC")
         broadcasts = cursor.fetchall()
         broadcast_dict_list = []
 
@@ -56,9 +56,7 @@ class Database(object):
             broadcast_dict['signature'] = loginserver_record_list[3]
 
             broadcast_dict['message'] = broadcast[1]
-            sender_created_at = float(broadcast[2])
-            formatted_sender_created_at = datetime.fromtimestamp(sender_created_at).strftime('%Y-%m-%d %H:%M:%S')
-            broadcast_dict['sender_created_at'] = formatted_sender_created_at
+            broadcast_dict['sender_created_at'] = datetime.fromtimestamp(float(broadcast[2])).strftime('%Y-%m-%d %H:%M:%S')
             broadcast_dict['message_signature'] = broadcast[3]
 
             broadcast_dict_list.append(broadcast_dict)
@@ -68,7 +66,7 @@ class Database(object):
     def get_message(self):
         connection = self.connect_db()
         cursor = connection.cursor()
-        cursor.execute("SELECT * FROM MESSAGES ")
+        cursor.execute("SELECT * FROM MESSAGES")
         messages = cursor.fetchall()
         message_dict_list = []
 

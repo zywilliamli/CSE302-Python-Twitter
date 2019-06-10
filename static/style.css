@@ -17,7 +17,7 @@
       left: 50%;
       overflow-y: scroll;
       line-height:20px;
-      height:325px;
+      height:40vh;
     }
 
     #Broadcast {
@@ -28,7 +28,7 @@
       left: 50%;
       overflow-y: scroll;
       line-height:20px;
-      height:325px;
+      height:40vh;
     }
 
     #MainWindow {

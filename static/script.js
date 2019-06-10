@@ -1,5 +1,5 @@
 $(document).ready(function() {
-
+    var logged_in = false
     var message = "null";
     var userName = "null";
     var time = "00:00:00";
@@ -9,6 +9,14 @@ $(document).ready(function() {
     function ping_check(){
         if (logged_in == true){
             $.post('/ping_check', function(data){
+            });
+        }
+    }
+
+   setInterval(report, 60000)
+    function report(){
+        if (logged_in == true){
+            $.post('/report', function(data){
             });
         }
     }
@@ -142,6 +150,7 @@ $(document).ready(function() {
 
      (function updateMessages(){
        setTimeout(function(){
+          if (logged_in == true){
           $.ajax({ url: "/update_message" , success: function(data) {
             var obj = JSON.parse(data);
             document.getElementById("message").innerHTML = "<h2 onclick = 'JavaScript:reset();'></h2>";
@@ -150,7 +159,7 @@ $(document).ready(function() {
             }
             updateMessages();
         }, datatype: "text"});
-        },5000);})();
+        }},20000);})();
 
 });
 
