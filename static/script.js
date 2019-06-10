@@ -147,10 +147,9 @@ $(document).ready(function() {
             updateBroadcast();
         }, datatype: "text"});
         },5000);})();
-
-     (function updateMessages(){
+		
+	  (function updateMessages(){
        setTimeout(function(){
-          if (logged_in == true){
           $.ajax({ url: "/update_message" , success: function(data) {
             var obj = JSON.parse(data);
             document.getElementById("message").innerHTML = "<h2 onclick = 'JavaScript:reset();'></h2>";
@@ -159,7 +158,7 @@ $(document).ready(function() {
             }
             updateMessages();
         }, datatype: "text"});
-        }},5000);})();
+        },5000);})();
 
 });
 

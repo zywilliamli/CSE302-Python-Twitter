@@ -128,8 +128,10 @@ class MainApp(object):
 
     @cherrypy.expose
     def update_message(self):
-        unsealed_box = nacl.public.SealedBox(cherrypy.session['private_key'].to_curve25519_private_key())
-
+        try:
+            unsealed_box = nacl.public.SealedBox(cherrypy.session['private_key'].to_curve25519_private_key())
+        except:
+            pass
         messages = db.get_message()
         message_list = []
         for message in messages:
