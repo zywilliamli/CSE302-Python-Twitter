@@ -201,9 +201,9 @@ class Data(object):
         return message
 
     @staticmethod
-    def pm(message, user_name):
+    def pm(orig_message, user_name):
         admin = next(item for item in cherrypy.session['user_list']['users'] if item['username'] == user_name)
-        message1 = message.encode('utf-8')
+        message1 = orig_message.encode('utf-8')
 
         verifykey = nacl.signing.VerifyKey(admin['incoming_pubkey'], encoder=nacl.encoding.HexEncoder)
         publickey = verifykey.to_curve25519_public_key()
